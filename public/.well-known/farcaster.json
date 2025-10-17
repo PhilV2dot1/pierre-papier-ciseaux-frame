@@ -1,0 +1,18 @@
+{
+  "accountAssociation": {
+    "header": "eyJmaWQiOjEsInR5cGUiOiJjdXN0b2R5Iiwia2V5IjoiMHgwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwIn0",
+    "payload": "eyJkb21haW4iOiJwaWVycmUtcGFwaWVyLWNpc2VhdXgtZnJhbWUudmVyY2VsLmFwcCJ9",
+    "signature": "MHg..."
+  },
+  "frame": {
+    "version": "next",
+    "name": "Pierre Papier Ciseaux",
+    "iconUrl": "https://pierre-papier-ciseaux-frame.vercel.app/icon.png",
+    "homeUrl": "https://pierre-papier-ciseaux-frame.vercel.app",
+    "imageUrl": "https://pierre-papier-ciseaux-frame.vercel.app/api/image/start",
+    "buttonTitle": "🎮 Jouer",
+    "splashImageUrl": "https://pierre-papier-ciseaux-frame.vercel.app/api/image/start",
+    "splashBackgroundColor": "#1a1a2e",
+    "webhookUrl": "https://pierre-papier-ciseaux-frame.vercel.app/api/play"
+  }
+}
