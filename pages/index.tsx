@@ -1,16 +1,25 @@
 import Head from 'next/head';
 
 export default function Home() {
+  const baseUrl = process.env.NEXT_PUBLIC_URL || 'https://pierre-papier-ciseaux-frame.vercel.app';
+  
   return (
     <>
       <Head>
+        {/* Métadonnées Frame essentielles */}
         <meta property="fc:frame" content="vNext" />
-        <meta property="fc:frame:image" content={`${process.env.NEXT_PUBLIC_URL}/api/image/start`} />
+        <meta property="fc:frame:image" content={`${baseUrl}/api/image/start`} />
+        <meta property="fc:frame:image:aspect_ratio" content="1.91:1" />
         <meta property="fc:frame:button:1" content="🪨 Pierre" />
         <meta property="fc:frame:button:2" content="📄 Papier" />
         <meta property="fc:frame:button:3" content="✂️ Ciseaux" />
-        <meta property="fc:frame:button:4" content="📊 Mes Stats" />
-        <meta property="fc:frame:post_url" content={`${process.env.NEXT_PUBLIC_URL}/api/play`} />
+        <meta property="fc:frame:button:4" content="📊 Stats" />
+        <meta property="fc:frame:post_url" content={`${baseUrl}/api/play`} />
+        
+        {/* Open Graph */}
+        <meta property="og:title" content="Pierre Papier Ciseaux On-Chain" />
+        <meta property="og:description" content="Jouez à Pierre-Papier-Ciseaux on-chain sur Farcaster !" />
+        <meta property="og:image" content={`${baseUrl}/api/image/start`} />
         
         <title>Pierre Papier Ciseaux - Farcaster Frame</title>
         <meta name="description" content="Jouez à Pierre-Papier-Ciseaux on-chain sur Farcaster !" />
@@ -23,6 +32,7 @@ export default function Home() {
         <div style={{ marginTop: '2rem', padding: '1rem', backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
           <h2>Comment jouer :</h2>
           <ol>
+            <li>Partagez cette URL dans un cast sur Farcaster</li>
             <li>Cliquez sur Pierre, Papier ou Ciseaux</li>
             <li>Le contrat génère le choix de l&apos;ordinateur</li>
             <li>Consultez vos stats et votre classement</li>
@@ -32,7 +42,7 @@ export default function Home() {
         <div style={{ marginTop: '2rem', padding: '1rem', backgroundColor: '#e3f2fd', borderRadius: '8px' }}>
           <h2>Fonctionnalités :</h2>
           <ul>
-            <li>✅ Statistiques complètes (victoires, défaites, égalités)</li>
+            <li>✅ Statistiques complètes on-chain</li>
             <li>🔥 Système de séries de victoires</li>
             <li>🏆 Classement global des meilleurs joueurs</li>
             <li>📈 Analyse de vos choix favoris</li>
@@ -41,9 +51,16 @@ export default function Home() {
         </div>
 
         <div style={{ marginTop: '2rem', padding: '1rem', backgroundColor: '#fff3e0', borderRadius: '8px' }}>
-          <h2>⚙️ Configuration requise :</h2>
-          <p>Adresse du contrat : <code>[VOTRE_ADRESSE_CONTRAT]</code></p>
-          <p>Network : Base / Optimism / Ethereum</p>
+          <h2>⚙️ Contrat :</h2>
+          <p>Base Mainnet : <code>0xE7e255228EBA6ad9422E7F8E76aB31ffeb8E8b1B</code></p>
+          <a 
+            href="https://basescan.org/address/0xE7e255228EBA6ad9422E7F8E76aB31ffeb8E8b1B" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            style={{ color: '#1976d2' }}
+          >
+            Voir sur BaseScan →
+          </a>
         </div>
       </main>
     </>
