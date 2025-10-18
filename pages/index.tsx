@@ -10,10 +10,20 @@ export default function Home() {
         <meta property="fc:frame" content="vNext" />
         <meta property="fc:frame:image" content={`${baseUrl}/api/image/start`} />
         <meta property="fc:frame:image:aspect_ratio" content="1.91:1" />
+        
+        {/* Boutons avec action explicite */}
         <meta property="fc:frame:button:1" content="🪨 Pierre" />
+        <meta property="fc:frame:button:1:action" content="post" />
+        
         <meta property="fc:frame:button:2" content="📄 Papier" />
+        <meta property="fc:frame:button:2:action" content="post" />
+        
         <meta property="fc:frame:button:3" content="✂️ Ciseaux" />
+        <meta property="fc:frame:button:3:action" content="post" />
+        
         <meta property="fc:frame:button:4" content="📊 Stats" />
+        <meta property="fc:frame:button:4:action" content="post" />
+        
         <meta property="fc:frame:post_url" content={`${baseUrl}/api/play`} />
         
         {/* Open Graph */}
