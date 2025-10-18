@@ -1,7 +1,7 @@
 import Head from 'next/head';
 
 export default function Home() {
-  const baseUrl = process.env.NEXT_PUBLIC_URL || 'https://pierre-papier-ciseaux-frame.vercel.app';
+  const baseUrl = 'https://pierre-papier-ciseaux-frame.vercel.app';
   
   return (
     <>
