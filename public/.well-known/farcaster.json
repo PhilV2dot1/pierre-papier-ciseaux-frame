@@ -1,15 +1,12 @@
 {
-  "accountAssociation": {
-    "header": "...",
-    "payload": "...",
-    "signature": "..."
-  },
   "frame": {
     "version": "1",
     "name": "Pierre Papier Ciseaux",
     "iconUrl": "https://pierre-papier-ciseaux-frame.vercel.app/icon.svg",
+    "homeUrl": "https://pierre-papier-ciseaux-frame.vercel.app/game",
+    "imageUrl": "https://pierre-papier-ciseaux-frame.vercel.app/splash.svg",
+    "buttonTitle": "Jouer",
     "splashImageUrl": "https://pierre-papier-ciseaux-frame.vercel.app/splash.svg",
-    "splashBackgroundColor": "#764ba2",
-    "homeUrl": "https://pierre-papier-ciseaux-frame.vercel.app/game"
+    "splashBackgroundColor": "#764ba2"
   }
 }
