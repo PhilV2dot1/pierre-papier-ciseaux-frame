@@ -2,8 +2,15 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  images: {
-    domains: [''],
+  async redirects() {
+    return [
+      {
+        source: '/.well-known/farcaster.json',
+        destination: 'https://api.farcaster.xyz/miniapps/hosted-manifest/0199fcb9-42f5-56f0-d6fd-9c5a7fca8daf',
+        permanent: false,
+        statusCode: 307,
+      },
+    ];
   },
   async headers() {
     return [
