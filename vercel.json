@@ -1,11 +1,23 @@
 {
   "framework": "nextjs",
-  "redirects": [
+  "headers": [
     {
       "source": "/.well-known/farcaster.json",
-      "destination": "https://api.farcaster.xyz/miniapps/hosted-manifest/0199fcb9-42f5-56f0-d6fd-9c5a7fca8daf",
-      "permanent": false,
-      "statusCode": 307
+      "headers": [
+        {
+          "key": "Location",
+          "value": "https://api.farcaster.xyz/miniapps/hosted-manifest/0199fcb9-42f5-56f0-d6fd-9c5a7fca8daf"
+        }
+      ]
+    }
+  ],
+  "routes": [
+    {
+      "src": "/.well-known/farcaster.json",
+      "status": 307,
+      "headers": {
+        "Location": "https://api.farcaster.xyz/miniapps/hosted-manifest/0199fcb9-42f5-56f0-d6fd-9c5a7fca8daf"
+      }
     }
   ]
 }
