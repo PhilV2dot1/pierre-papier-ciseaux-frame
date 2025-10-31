@@ -2,15 +2,54 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { ConnectKitButton } from 'connectkit';
-import { parseAbiItem } from 'viem';
 
-const CONTRACT_ADDRESS = '0xE7e255228EBA6ad9422E7F8E76aB31ffeb8E8b1B' as const;
-
+const CONTRACT_ADDRESS = '0xE7e255228EBA6ad9422E7F8E76aB31ffeb8E8b1B' as `0x${string}`;
 const CONTRACT_ABI = [
-  parseAbiItem('function jouer(uint256 _choix) public returns (string memory)'),
-  parseAbiItem('function creerProfil(string memory _nom) public'),
-  parseAbiItem('function obtenirStats() public view returns (string memory nom, uint256 victoires, uint256 defaites, uint256 egalites, uint256 totalParties, uint256 tauxVictoire, uint256 serieActuelle, uint256 meilleureSerie)'),
-  parseAbiItem('function joueurs(address) public view returns (string memory nom, uint256 victoires, uint256 defaites, uint256 egalites, uint256 serieActuelle, uint256 meilleureSerie, bool existe)'),
+  {
+    inputs: [{ internalType: 'uint256', name: '_choix', type: 'uint256' }],
+    name: 'jouer',
+    outputs: [{ internalType: 'string', name: '', type: 'string' }],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [{ internalType: 'string', name: '_nom', type: 'string' }],
+    name: 'creerProfil',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'obtenirStats',
+    outputs: [
+      { internalType: 'string', name: 'nom', type: 'string' },
+      { internalType: 'uint256', name: 'victoires', type: 'uint256' },
+      { internalType: 'uint256', name: 'defaites', type: 'uint256' },
+      { internalType: 'uint256', name: 'egalites', type: 'uint256' },
+      { internalType: 'uint256', name: 'totalParties', type: 'uint256' },
+      { internalType: 'uint256', name: 'tauxVictoire', type: 'uint256' },
+      { internalType: 'uint256', name: 'serieActuelle', type: 'uint256' },
+      { internalType: 'uint256', name: 'meilleureSerie', type: 'uint256' },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [{ internalType: 'address', name: '', type: 'address' }],
+    name: 'joueurs',
+    outputs: [
+      { internalType: 'string', name: 'nom', type: 'string' },
+      { internalType: 'uint256', name: 'victoires', type: 'uint256' },
+      { internalType: 'uint256', name: 'defaites', type: 'uint256' },
+      { internalType: 'uint256', name: 'egalites', type: 'uint256' },
+      { internalType: 'uint256', name: 'serieActuelle', type: 'uint256' },
+      { internalType: 'uint256', name: 'meilleureSerie', type: 'uint256' },
+      { internalType: 'bool', name: 'existe', type: 'bool' },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
 ] as const;
 
 export default function Game() {
@@ -39,7 +78,7 @@ export default function Game() {
     address: CONTRACT_ADDRESS,
     abi: CONTRACT_ABI,
     functionName: 'obtenirStats',
-    query: { enabled: isConnected && playerData?.[6] === true }
+    query: { enabled: isConnected && playerData && (playerData as any)[6] === true }
   });
 
   // Wait for transaction
@@ -90,7 +129,8 @@ export default function Game() {
       return;
     }
 
-    if (!playerData?.[6]) {
+    const playerExists = playerData && (playerData as any)[6] === true;
+if (!playerExists) {
       setShowNameInput(true);
       return;
     }
