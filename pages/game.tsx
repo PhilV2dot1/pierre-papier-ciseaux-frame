@@ -1,68 +1,155 @@
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
+import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { ConnectKitButton } from 'connectkit';
+import { parseAbiItem } from 'viem';
+
+const CONTRACT_ADDRESS = '0xE7e255228EBA6ad9422E7F8E76aB31ffeb8E8b1B' as const;
+
+const CONTRACT_ABI = [
+  parseAbiItem('function jouer(uint256 _choix) public returns (string memory)'),
+  parseAbiItem('function creerProfil(string memory _nom) public'),
+  parseAbiItem('function obtenirStats() public view returns (string memory nom, uint256 victoires, uint256 defaites, uint256 egalites, uint256 totalParties, uint256 tauxVictoire, uint256 serieActuelle, uint256 meilleureSerie)'),
+  parseAbiItem('function joueurs(address) public view returns (string memory nom, uint256 victoires, uint256 defaites, uint256 egalites, uint256 serieActuelle, uint256 meilleureSerie, bool existe)'),
+] as const;
 
 export default function Game() {
+  const [mode, setMode] = useState<'free' | 'onchain'>('free');
   const [choice, setChoice] = useState<number | null>(null);
   const [result, setResult] = useState('');
-  const [score, setScore] = useState({ wins: 0, losses: 0, ties: 0 });
-  const [isInFrame, setIsInFrame] = useState(false);
+  const [freeScore, setFreeScore] = useState({ wins: 0, losses: 0, ties: 0 });
   const [showResult, setShowResult] = useState(false);
+  const [playerName, setPlayerName] = useState('');
+  const [showNameInput, setShowNameInput] = useState(false);
+
+  const { address, isConnected } = useAccount();
+  const { writeContract, data: hash, isPending } = useWriteContract();
+
+  // Check if player exists
+  const { data: playerData, refetch: refetchPlayer } = useReadContract({
+    address: CONTRACT_ADDRESS,
+    abi: CONTRACT_ABI,
+    functionName: 'joueurs',
+    args: address ? [address] : undefined,
+    query: { enabled: isConnected && !!address }
+  });
+
+  // Get on-chain stats
+  const { data: onchainStats, refetch: refetchStats } = useReadContract({
+    address: CONTRACT_ADDRESS,
+    abi: CONTRACT_ABI,
+    functionName: 'obtenirStats',
+    query: { enabled: isConnected && playerData?.[6] === true }
+  });
+
+  // Wait for transaction
+  const { isSuccess } = useWaitForTransactionReceipt({ hash });
 
   useEffect(() => {
-    setIsInFrame(window.parent !== window);
-  }, []);
+    if (isSuccess) {
+      refetchPlayer();
+      refetchStats();
+      setResult('✅ Transaction confirmed!');
+      setTimeout(() => setShowResult(true), 500);
+    }
+  }, [isSuccess]);
 
-  const play = async (playerChoice: number) => {
+  const playFree = (playerChoice: number) => {
     setChoice(playerChoice);
     setShowResult(false);
     
-    // Animation delay
     setTimeout(() => {
       const computerChoice = Math.floor(Math.random() * 3);
-      
-      const choices = [
-        { emoji: '🪨', name: 'Rock' },
-        { emoji: '📄', name: 'Paper' },
-        { emoji: '✂️', name: 'Scissors' }
-      ];
+      const choices = ['🪨 Rock', '📄 Paper', '✂️ Scissors'];
       
       let outcome = '';
-      let resultType = '';
-      
       if (playerChoice === computerChoice) {
         outcome = '🤝 Tie!';
-        resultType = 'tie';
-        setScore(prev => ({ ...prev, ties: prev.ties + 1 }));
+        setFreeScore(prev => ({ ...prev, ties: prev.ties + 1 }));
       } else if (
         (playerChoice === 0 && computerChoice === 2) ||
         (playerChoice === 1 && computerChoice === 0) ||
         (playerChoice === 2 && computerChoice === 1)
       ) {
         outcome = '🎉 You Win!';
-        resultType = 'win';
-        setScore(prev => ({ ...prev, wins: prev.wins + 1 }));
+        setFreeScore(prev => ({ ...prev, wins: prev.wins + 1 }));
       } else {
         outcome = '😞 You Lose';
-        resultType = 'lose';
-        setScore(prev => ({ ...prev, losses: prev.losses + 1 }));
+        setFreeScore(prev => ({ ...prev, losses: prev.losses + 1 }));
       }
       
-      setResult(`${choices[playerChoice].emoji} vs ${choices[computerChoice].emoji} • ${outcome}`);
+      setResult(`${choices[playerChoice]} vs ${choices[computerChoice]} • ${outcome}`);
       setShowResult(true);
     }, 300);
   };
 
-  const resetScore = () => {
-    setScore({ wins: 0, losses: 0, ties: 0 });
+  const playOnChain = async (playerChoice: number) => {
+    if (!isConnected) {
+      setResult('❌ Please connect your wallet first');
+      setShowResult(true);
+      return;
+    }
+
+    if (!playerData?.[6]) {
+      setShowNameInput(true);
+      return;
+    }
+
+    try {
+      setChoice(playerChoice);
+      setResult('⏳ Sending transaction...');
+      setShowResult(true);
+      
+      writeContract({
+        address: CONTRACT_ADDRESS,
+        abi: CONTRACT_ABI,
+        functionName: 'jouer',
+        args: [BigInt(playerChoice)],
+      });
+    } catch (error) {
+      console.error(error);
+      setResult('❌ Transaction failed');
+    }
+  };
+
+  const createProfile = async () => {
+    if (!playerName) {
+      alert('Please enter a name');
+      return;
+    }
+
+    try {
+      writeContract({
+        address: CONTRACT_ADDRESS,
+        abi: CONTRACT_ABI,
+        functionName: 'creerProfil',
+        args: [playerName],
+      });
+      setShowNameInput(false);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const resetFreeScore = () => {
+    setFreeScore({ wins: 0, losses: 0, ties: 0 });
     setResult('');
     setChoice(null);
     setShowResult(false);
   };
 
+  const currentScore = mode === 'free' 
+    ? freeScore 
+    : {
+        wins: Number(onchainStats?.[1] || 0),
+        losses: Number(onchainStats?.[2] || 0),
+        ties: Number(onchainStats?.[3] || 0)
+      };
+
   return (
     <>
       <Head>
-        <title>Rock Paper Scissors - On-Chain Game</title>
+        <title>Rock Paper Scissors - Hybrid Mode</title>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
       </Head>
 
@@ -72,15 +159,14 @@ export default function Game() {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        color: 'white',
         padding: '1.5rem',
+        color: 'white',
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         position: 'relative',
         overflow: 'hidden'
       }}>
         
-        {/* Decorative circles */}
+        {/* Decorative elements */}
         <div style={{
           position: 'absolute',
           top: '-50px',
@@ -91,48 +177,67 @@ export default function Game() {
           background: 'rgba(255,255,255,0.1)',
           filter: 'blur(40px)'
         }} />
-        <div style={{
-          position: 'absolute',
-          bottom: '-80px',
-          left: '-80px',
-          width: '300px',
-          height: '300px',
-          borderRadius: '50%',
-          background: 'rgba(255,255,255,0.1)',
-          filter: 'blur(60px)'
-        }} />
 
         {/* Header */}
-        <div style={{ 
-          textAlign: 'center', 
-          width: '100%', 
-          maxWidth: '500px',
-          zIndex: 1,
-          marginTop: '1rem'
-        }}>
-          <div style={{ 
-            fontSize: '3.5rem', 
-            marginBottom: '0.5rem',
-            filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.2))'
-          }}>
-            🎮
-          </div>
-          <h1 style={{ 
-            fontSize: '1.8rem', 
-            marginBottom: '0.3rem',
-            fontWeight: '700',
-            textShadow: '0 2px 10px rgba(0,0,0,0.2)'
-          }}>
+        <div style={{ textAlign: 'center', width: '100%', maxWidth: '500px', zIndex: 1 }}>
+          <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🎮</div>
+          <h1 style={{ fontSize: '1.8rem', marginBottom: '0.5rem', fontWeight: '700' }}>
             Rock Paper Scissors
           </h1>
-          <p style={{ 
-            fontSize: '1rem', 
-            opacity: 0.95,
-            fontWeight: '500'
-          }}>
-            On-Chain Game • Base Network
-          </p>
+          <p style={{ fontSize: '0.9rem', opacity: 0.9 }}>On-Chain Game • Base Network</p>
         </div>
+
+        {/* Mode Selector */}
+        <div style={{
+          display: 'flex',
+          gap: '0.5rem',
+          marginTop: '1.5rem',
+          backgroundColor: 'rgba(255,255,255,0.15)',
+          padding: '0.3rem',
+          borderRadius: '12px',
+          backdropFilter: 'blur(10px)',
+          zIndex: 1
+        }}>
+          <button
+            onClick={() => setMode('free')}
+            style={{
+              padding: '0.7rem 1.5rem',
+              borderRadius: '10px',
+              border: 'none',
+              backgroundColor: mode === 'free' ? 'rgba(255,255,255,0.3)' : 'transparent',
+              color: 'white',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'all 0.3s',
+              fontSize: '0.9rem'
+            }}
+          >
+            🆓 Free Play
+          </button>
+          <button
+            onClick={() => setMode('onchain')}
+            style={{
+              padding: '0.7rem 1.5rem',
+              borderRadius: '10px',
+              border: 'none',
+              backgroundColor: mode === 'onchain' ? 'rgba(255,255,255,0.3)' : 'transparent',
+              color: 'white',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'all 0.3s',
+              fontSize: '0.9rem'
+            }}
+          >
+            ⛓️ On-Chain
+          </button>
+        </div>
+
+        {/* Connect Wallet (On-Chain mode) */}
+        {mode === 'onchain' && (
+          <div style={{ marginTop: '1rem', zIndex: 1 }}>
+            <ConnectKitButton />
+          </div>
+        )}
 
         {/* Score Board */}
         <div style={{
@@ -142,7 +247,7 @@ export default function Game() {
           width: '100%',
           maxWidth: '400px',
           zIndex: 1,
-          marginTop: '1rem'
+          marginTop: '1.5rem'
         }}>
           <div style={{
             flex: 1,
@@ -154,7 +259,7 @@ export default function Game() {
             border: '1px solid rgba(255,255,255,0.2)'
           }}>
             <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#10b981' }}>
-              {score.wins}
+              {currentScore.wins}
             </div>
             <div style={{ fontSize: '0.75rem', opacity: 0.9 }}>Wins</div>
           </div>
@@ -168,7 +273,7 @@ export default function Game() {
             border: '1px solid rgba(255,255,255,0.2)'
           }}>
             <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#ef4444' }}>
-              {score.losses}
+              {currentScore.losses}
             </div>
             <div style={{ fontSize: '0.75rem', opacity: 0.9 }}>Losses</div>
           </div>
@@ -182,38 +287,107 @@ export default function Game() {
             border: '1px solid rgba(255,255,255,0.2)'
           }}>
             <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#fbbf24' }}>
-              {score.ties}
+              {currentScore.ties}
             </div>
             <div style={{ fontSize: '0.75rem', opacity: 0.9 }}>Ties</div>
           </div>
         </div>
 
-        {/* Game Area */}
-        <div style={{ 
-          textAlign: 'center', 
-          width: '100%', 
-          maxWidth: '500px',
-          zIndex: 1,
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center'
-        }}>
-          <h2 style={{ 
-            fontSize: '1.3rem', 
-            marginBottom: '1.5rem',
-            fontWeight: '600'
+        {/* On-Chain Stats */}
+        {mode === 'onchain' && onchainStats && (
+          <div style={{
+            marginTop: '1rem',
+            padding: '0.8rem 1.2rem',
+            backgroundColor: 'rgba(255,255,255,0.15)',
+            borderRadius: '10px',
+            fontSize: '0.85rem',
+            textAlign: 'center',
+            backdropFilter: 'blur(10px)'
           }}>
+            🔥 Current Streak: {onchainStats[6].toString()} | 🏆 Best Streak: {onchainStats[7].toString()}
+          </div>
+        )}
+
+        {/* Create Profile Modal */}
+        {showNameInput && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100
+          }}>
+            <div style={{
+              backgroundColor: 'white',
+              padding: '2rem',
+              borderRadius: '20px',
+              maxWidth: '300px',
+              width: '90%'
+            }}>
+              <h3 style={{ color: '#1f2937', marginBottom: '1rem' }}>Create Profile</h3>
+              <input
+                type="text"
+                placeholder="Enter your name"
+                value={playerName}
+                onChange={(e) => setPlayerName(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.8rem',
+                  borderRadius: '10px',
+                  border: '2px solid #e5e7eb',
+                  marginBottom: '1rem',
+                  fontSize: '1rem'
+                }}
+              />
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  onClick={createProfile}
+                  disabled={isPending}
+                  style={{
+                    flex: 1,
+                    padding: '0.8rem',
+                    backgroundColor: '#667eea',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '10px',
+                    fontWeight: '600',
+                    cursor: isPending ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {isPending ? '⏳' : '✅ Create'}
+                </button>
+                <button
+                  onClick={() => setShowNameInput(false)}
+                  style={{
+                    flex: 1,
+                    padding: '0.8rem',
+                    backgroundColor: '#ef4444',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '10px',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Game Buttons */}
+        <div style={{ textAlign: 'center', width: '100%', maxWidth: '500px', zIndex: 1, marginTop: '2rem' }}>
+          <h2 style={{ fontSize: '1.3rem', marginBottom: '1.5rem', fontWeight: '600' }}>
             Choose Your Move
           </h2>
           
-          <div style={{ 
-            display: 'flex', 
-            gap: '1rem', 
-            justifyContent: 'center',
-            marginBottom: '2rem',
-            flexWrap: 'wrap'
-          }}>
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginBottom: '2rem' }}>
             {[
               { emoji: '🪨', name: 'Rock', index: 0 },
               { emoji: '📄', name: 'Paper', index: 1 },
@@ -221,40 +395,24 @@ export default function Game() {
             ].map((option) => (
               <button
                 key={option.index}
-                onClick={() => play(option.index)}
+                onClick={() => mode === 'free' ? playFree(option.index) : playOnChain(option.index)}
+                disabled={mode === 'onchain' && isPending}
                 style={{
                   fontSize: '3rem',
                   padding: '1.2rem',
-                  backgroundColor: choice === option.index 
-                    ? 'rgba(255,255,255,0.3)' 
-                    : 'rgba(255,255,255,0.15)',
+                  backgroundColor: choice === option.index ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.15)',
                   backdropFilter: 'blur(10px)',
                   border: '2px solid rgba(255,255,255,0.3)',
                   borderRadius: '20px',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  cursor: (mode === 'onchain' && isPending) ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.3s',
                   width: '100px',
                   height: '100px',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
-                  transform: choice === option.index ? 'scale(1.05)' : 'scale(1)'
-                }}
-                onMouseOver={(e) => {
-                  if (choice !== option.index) {
-                    e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.25)';
-                    e.currentTarget.style.transform = 'scale(1.05) translateY(-5px)';
-                    e.currentTarget.style.boxShadow = '0 8px 25px rgba(0,0,0,0.3)';
-                  }
-                }}
-                onMouseOut={(e) => {
-                  if (choice !== option.index) {
-                    e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.15)';
-                    e.currentTarget.style.transform = 'scale(1)';
-                    e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.2)';
-                  }
+                  boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
                 }}
               >
                 <div>{option.emoji}</div>
@@ -272,11 +430,9 @@ export default function Game() {
               color: '#1f2937',
               padding: '1.2rem',
               borderRadius: '16px',
-              fontSize: '1.2rem',
+              fontSize: '1.1rem',
               fontWeight: '700',
-              textAlign: 'center',
               boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
-              animation: 'slideUp 0.4s ease-out',
               marginBottom: '1rem'
             }}>
               {result}
@@ -285,39 +441,29 @@ export default function Game() {
         </div>
 
         {/* Footer */}
-        <div style={{ 
-          textAlign: 'center', 
-          width: '100%',
-          zIndex: 1,
-          paddingBottom: '1rem'
-        }}>
-          <button
-            onClick={resetScore}
-            style={{
-              backgroundColor: 'rgba(255,255,255,0.2)',
-              border: '1px solid rgba(255,255,255,0.3)',
-              color: 'white',
-              padding: '0.7rem 1.5rem',
-              borderRadius: '10px',
-              cursor: 'pointer',
-              fontSize: '0.9rem',
-              fontWeight: '600',
-              marginBottom: '1rem',
-              backdropFilter: 'blur(10px)',
-              transition: 'all 0.3s'
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.3)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)';
-            }}
-          >
-            🔄 Reset Score
-          </button>
+        <div style={{ textAlign: 'center', width: '100%', zIndex: 1, marginTop: 'auto', paddingTop: '2rem' }}>
+          {mode === 'free' && (
+            <button
+              onClick={resetFreeScore}
+              style={{
+                backgroundColor: 'rgba(255,255,255,0.2)',
+                border: '1px solid rgba(255,255,255,0.3)',
+                color: 'white',
+                padding: '0.7rem 1.5rem',
+                borderRadius: '10px',
+                cursor: 'pointer',
+                fontSize: '0.9rem',
+                fontWeight: '600',
+                marginBottom: '1rem',
+                backdropFilter: 'blur(10px)'
+              }}
+            >
+              🔄 Reset Score
+            </button>
+          )}
           
           <div style={{ fontSize: '0.85rem', opacity: 0.9, marginBottom: '0.3rem' }}>
-            Smart Contract on Base
+            {mode === 'onchain' ? '⛓️ On-Chain Mode' : '🆓 Free Play Mode'}
           </div>
           <a 
             href="https://basescan.org/address/0xE7e255228EBA6ad9422E7F8E76aB31ffeb8E8b1B"
@@ -325,29 +471,15 @@ export default function Game() {
             rel="noopener noreferrer"
             style={{ 
               color: 'white', 
-              textDecoration: 'none',
               fontSize: '0.75rem',
               opacity: 0.8,
-              borderBottom: '1px solid rgba(255,255,255,0.3)',
-              paddingBottom: '2px'
+              textDecoration: 'none',
+              borderBottom: '1px solid rgba(255,255,255,0.3)'
             }}
           >
-            0xE7e2...8b1B →
+            View Contract →
           </a>
         </div>
-
-        <style jsx>{`
-          @keyframes slideUp {
-            from {
-              opacity: 0;
-              transform: translateY(20px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-        `}</style>
       </div>
     </>
   );
