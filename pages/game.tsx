@@ -1,3 +1,4 @@
+import sdk from '@farcaster/frame-sdk';
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
@@ -60,7 +61,8 @@ export default function Game() {
   const [showResult, setShowResult] = useState(false);
   const [playerName, setPlayerName] = useState('');
   const [showNameInput, setShowNameInput] = useState(false);
-
+  const [isInFrame, setIsInFrame] = useState(false);
+  const [farcasterUser, setFarcasterUser] = useState<any>(null);
   const { address, isConnected } = useAccount();
 const { writeContract, data: hash, isPending } = useWriteContract();
 
@@ -83,6 +85,25 @@ const { writeContract, data: hash, isPending } = useWriteContract();
 
   // Wait for transaction
   const { isSuccess } = useWaitForTransactionReceipt({ hash });
+useEffect(() => {
+  const initFarcaster = async () => {
+    const isInFarcaster = window.parent !== window;
+    setIsInFrame(isInFarcaster);
+    
+    if (isInFarcaster) {
+      try {
+        const context = await sdk.context;
+        setFarcasterUser(context.user);
+        sdk.actions.ready();
+      } catch (error) {
+        console.error('Farcaster SDK error:', error);
+        sdk.actions.ready(); // Call ready anyway
+      }
+    }
+  };
+  
+  initFarcaster();
+}, []);
 
   useEffect(() => {
     if (isSuccess) {
@@ -227,7 +248,15 @@ writeContract({
           </h1>
           <p style={{ fontSize: '0.9rem', opacity: 0.9 }}>On-Chain Game • Base Network</p>
         </div>
-
+{farcasterUser && (
+  <div style={{ 
+    fontSize: '0.9rem', 
+    opacity: 0.9,
+    marginTop: '0.5rem'
+  }}>
+    Welcome @{farcasterUser.username} !
+  </div>
+)}
         {/* Mode Selector */}
         <div style={{
           display: 'flex',
