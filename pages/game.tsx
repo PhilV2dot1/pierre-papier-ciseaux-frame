@@ -62,7 +62,7 @@ export default function Game() {
   const [showNameInput, setShowNameInput] = useState(false);
 
   const { address, isConnected } = useAccount();
-  const { writeContract, data: hash, isPending } = useWriteContract();
+const { writeContract, data: hash, isPending } = useWriteContract();
 
   // Check if player exists
   const { data: playerData, refetch: refetchPlayer } = useReadContract({
@@ -140,12 +140,13 @@ if (!playerExists) {
       setResult('⏳ Sending transaction...');
       setShowResult(true);
       
-      writeContract({
-        address: CONTRACT_ADDRESS,
-        abi: CONTRACT_ABI,
-        functionName: 'jouer',
-        args: [BigInt(playerChoice)],
-      });
+writeContract({
+  address: CONTRACT_ADDRESS,
+  abi: CONTRACT_ABI,
+  functionName: 'jouer',
+  args: [BigInt(playerChoice)],
+} as any);
+
     } catch (error) {
       console.error(error);
       setResult('❌ Transaction failed');
@@ -159,12 +160,12 @@ if (!playerExists) {
     }
 
     try {
-      writeContract({
-        address: CONTRACT_ADDRESS,
-        abi: CONTRACT_ABI,
-        functionName: 'creerProfil',
-        args: [playerName],
-      });
+    writeContract({
+  address: CONTRACT_ADDRESS,
+  abi: CONTRACT_ABI,
+  functionName: 'creerProfil',
+  args: [playerName],
+} as any);
       setShowNameInput(false);
     } catch (error) {
       console.error(error);
