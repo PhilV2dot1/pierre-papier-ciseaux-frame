@@ -276,7 +276,7 @@ writeContract({
         {/* Connect Wallet (On-Chain mode) */}
         {mode === 'onchain' && (
           <div style={{ marginTop: '1rem', zIndex: 1 }}>
-            <ConnectKitButton />
+            <ConnectButton />
           </div>
         )}
 
