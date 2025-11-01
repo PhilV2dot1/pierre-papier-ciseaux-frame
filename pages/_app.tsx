@@ -3,7 +3,7 @@ import { WagmiProvider, createConfig, http } from 'wagmi';
 import { base } from 'wagmi/chains';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RainbowKitProvider, getDefaultConfig, darkTheme } from '@rainbow-me/rainbowkit';
-import { frameConnector } from '@farcaster/frame-wagmi-connector';
+import * as frameConnector from '@farcaster/frame-wagmi-connector'
 import '@rainbow-me/rainbowkit/styles.css';
 
 const config = getDefaultConfig({
