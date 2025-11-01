@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { ConnectKitButton } from 'connectkit';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 
 const CONTRACT_ADDRESS = '0xE7e255228EBA6ad9422E7F8E76aB31ffeb8E8b1B' as `0x${string}`;
 const CONTRACT_ABI = [
