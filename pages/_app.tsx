@@ -2,7 +2,8 @@ import type { AppProps } from 'next/app';
 import { WagmiProvider, createConfig, http } from 'wagmi';
 import { base } from 'wagmi/chains';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { RainbowKitProvider, getDefaultConfig } from '@rainbow-me/rainbowkit';
+import { RainbowKitProvider, getDefaultConfig, darkTheme } from '@rainbow-me/rainbowkit';
+import { frameConnector } from '@farcaster/frame-wagmi-connector';
 import '@rainbow-me/rainbowkit/styles.css';
 
 const config = getDefaultConfig({
@@ -12,6 +13,7 @@ const config = getDefaultConfig({
   transports: {
     [base.id]: http(),
   },
+  connectors: [frameConnector()],
 });
 
 const queryClient = new QueryClient();
@@ -20,7 +22,12 @@ export default function App({ Component, pageProps }: AppProps) {
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider>
+        <RainbowKitProvider 
+          theme={darkTheme({
+            accentColor: '#764ba2',
+            accentColorForeground: 'white',
+          })}
+        >
           <Component {...pageProps} />
         </RainbowKitProvider>
       </QueryClientProvider>

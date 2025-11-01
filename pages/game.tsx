@@ -1,4 +1,5 @@
 import sdk from '@farcaster/frame-sdk';
+import { useConnect } from 'wagmi';
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
@@ -64,7 +65,7 @@ export default function Game() {
   const [isInFrame, setIsInFrame] = useState(false);
   const [farcasterUser, setFarcasterUser] = useState<any>(null);
   const { address, isConnected } = useAccount();
-const { writeContract, data: hash, isPending } = useWriteContract();
+  const { writeContract, data: hash, isPending } = useWriteContract();
 
   // Check if player exists
   const { data: playerData, refetch: refetchPlayer } = useReadContract({
@@ -104,6 +105,37 @@ useEffect(() => {
   
   initFarcaster();
 }, []);
+
+const { connect, connectors } = useConnect();
+
+// Auto-connect Farcaster wallet when in frame
+useEffect(() => {
+  const initFarcaster = async () => {
+    const isInFarcaster = window.parent !== window;
+    setIsInFrame(isInFarcaster);
+    
+    if (isInFarcaster) {
+      try {
+        const context = await sdk.context;
+        setFarcasterUser(context.user);
+        
+        // Auto-connect Farcaster wallet
+        const farcasterConnector = connectors.find(c => c.id === 'farcaster');
+        if (farcasterConnector && !isConnected) {
+          connect({ connector: farcasterConnector });
+        }
+        
+        sdk.actions.ready();
+      } catch (error) {
+        console.error('Farcaster SDK error:', error);
+        sdk.actions.ready();
+      }
+    }
+  };
+  
+  initFarcaster();
+}, [connectors, connect, isConnected]);
+
 
   useEffect(() => {
     if (isSuccess) {
@@ -303,11 +335,26 @@ writeContract({
         </div>
 
         {/* Connect Wallet (On-Chain mode) */}
-        {mode === 'onchain' && (
-          <div style={{ marginTop: '1rem', zIndex: 1 }}>
-            <ConnectButton />
-          </div>
-        )}
+      
+        {mode === 'onchain' && !isInFrame && (
+  <div style={{ marginTop: '1rem', zIndex: 1 }}>
+    <ConnectButton />
+  </div>
+)}
+
+{mode === 'onchain' && isInFrame && isConnected && (
+  <div style={{ 
+    marginTop: '1rem', 
+    padding: '0.8rem 1.2rem',
+    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+    borderRadius: '10px',
+    fontSize: '0.9rem',
+    backdropFilter: 'blur(10px)',
+    border: '1px solid rgba(255,255,255,0.3)'
+  }}>
+    ✅ Connected with Farcaster Wallet
+  </div>
+)}
 
         {/* Score Board */}
         <div style={{
